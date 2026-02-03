@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -104,13 +101,14 @@ func (lc *LogController) PostLog(c *gin.Context) {
 	start := time.Now()
 
 	// 获取上传的文件
-	file, fileHead, err := c.Request.FormFile("logfile")
+	file, _, err := c.Request.FormFile("logfile")
 	if err != nil {
 		lc.log.Errorf("get FormFile('logfile') error: %s", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	defer file.Close()
+
 	var args services.UploadLogArgs
 	s := c.Request.FormValue("args")
 	if err := json.Unmarshal([]byte(s), &args); err != nil {
@@ -118,6 +116,7 @@ func (lc *LogController) PostLog(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	userId := getUserId(c.Request.Header)
 	if userId != args.UserID {
 		lc.log.Errorf("validate user_id error: args.user_id: %s, token.user_id: %s", args.UserID, userId)
@@ -128,28 +127,10 @@ func (lc *LogController) PostLog(c *gin.Context) {
 	// Record logs received metrics
 	internal.RecordLogsReceived(args.ClientID, "upload")
 
-	if _, err := lc.logService.CreateLog(context.Background(), &args); err != nil {
-		lc.handleError(c, err)
-		return
-	}
-
-	destPath := filepath.Join("/data", args.ClientID, fileHead.Filename)
-	if err := os.MkdirAll(filepath.Join("/data", args.ClientID), 0755); err != nil {
-		lc.log.Errorf("Failed to create file: %s, error: %s", destPath, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create file"})
-		return
-	}
-	destFile, err := os.Create(destPath)
+	// Save log record and file through service layer
+	destPath, err := lc.logService.UploadLog(context.Background(), &args, file)
 	if err != nil {
-		lc.log.Errorf("Failed to create file: %s, error: %s", destPath, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create file"})
-		return
-	}
-	defer destFile.Close()
-	// 将上传的文件内容复制到目标文件
-	if _, err := io.Copy(destFile, file); err != nil {
-		lc.log.Errorf("Failed to save file: %s, error: %s", destPath, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		lc.handleError(c, err)
 		return
 	}
 

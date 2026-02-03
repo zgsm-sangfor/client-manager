@@ -18,6 +18,7 @@ type Log struct {
 	FileName    string    `json:"file_name" gorm:"index;not null"`
 	FirstLineNo int64     `json:"first_line_no"`
 	LastLineNo  int64     `json:"end_line_no"`
+	Size        int64     `json:"size"`
 	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt   time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
