@@ -10,16 +10,19 @@ jobs:
     name: Commit to Main Repository
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout current repository
+      - name: Checkout source repository (current repository)
         uses: actions/checkout@v3
+        with:
+          path: source-repo
 
       - name: Get tag version
         id: version
         run: |
+          cd source-repo
           VERSION="${GITHUB_REF#refs/tags/}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Checkout target repository
+      - name: Checkout target repository (costrict-backend)
         uses: actions/checkout@v3
         with:
           repository: zgsm-ai/costrict-backend.git
@@ -50,11 +53,11 @@ jobs:
             rm -rf "${{ steps.target_dir.outputs.target_dir }}"
           fi
 
-      - name: Copy current repository content to target directory
+      - name: Copy source repository content to target directory
         run: |
           mkdir -p "target-repo/${{ steps.target_dir.outputs.target_dir }}"
-          cp -r ./* "target-repo/${{ steps.target_dir.outputs.target_dir }}/" 2>/dev/null || true
-          cp -r .[^.]* "target-repo/${{ steps.target_dir.outputs.target_dir }}/" 2>/dev/null || true
+          cp -r source-repo/* "target-repo/${{ steps.target_dir.outputs.target_dir }}/" 2>/dev/null || true
+          cp -r source-repo/.[!.]* "target-repo/${{ steps.target_dir.outputs.target_dir }}/" 2>/dev/null || true
 
       - name: Commit and push changes
         run: |
