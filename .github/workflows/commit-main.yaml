@@ -25,8 +25,8 @@ jobs:
       - name: Checkout target repository (costrict-backend)
         uses: actions/checkout@v3
         with:
-          repository: zgsm-ai/costrict-backend.git
-          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: zgsm-ai/costrict-backend
+          token: ${{ secrets.PAT_TOKEN }}
           path: target-repo
 
       - name: Determine target directory
